@@ -34,6 +34,7 @@ cfg_async_client! {
 pub mod error;
 
 pub use error::Error;
+use tracing::debug;
 
 use std::fmt;
 use std::future::Future;
@@ -650,6 +651,19 @@ fn subscription_channel(max_buf_size: usize) -> (SubscriptionSender, Subscriptio
 	let (tx, rx) = mpsc::channel(max_buf_size);
 	let lagged_tx = SubscriptionLagged::new();
 	let lagged_rx = lagged_tx.clone();
+
+	let tx_clone = tx.clone();
+	let max_cap = tx_clone.max_capacity();
+	tokio::spawn(async move {
+		let mut interval = tokio::time::interval(tokio::time::Duration::from_secs(1));
+
+		loop {
+			interval.tick().await;
+			let remaining = tx_clone.capacity();
+			let used = max_cap - remaining;
+			debug!(target: "narumi", used, remaining, max_cap, "Subscription buffer usage");
+		}
+	});
 
 	(SubscriptionSender { inner: tx, lagged: lagged_tx }, SubscriptionReceiver { inner: rx, lagged: lagged_rx })
 }
