@@ -654,14 +654,12 @@ fn subscription_channel(max_buf_size: usize) -> (SubscriptionSender, Subscriptio
 
 	let tx_clone = tx.clone();
 	let max_cap = tx_clone.max_capacity();
-	tokio::spawn(async move {
-		let mut interval = tokio::time::interval(tokio::time::Duration::from_secs(1));
-
+	std::thread::spawn(move || {
 		loop {
-			interval.tick().await;
 			let remaining = tx_clone.capacity();
 			let used = max_cap - remaining;
-			debug!(target: "narumi", used, remaining, max_cap, "Subscription buffer usage");
+			debug!(target: "narumi", "[monitor] used: {used}, remaining: {remaining}");
+			std::thread::sleep(std::time::Duration::from_secs(1));
 		}
 	});
 
