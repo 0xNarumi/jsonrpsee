@@ -622,6 +622,7 @@ pub(crate) struct SubscriptionSender {
 
 impl SubscriptionSender {
 	fn send(&self, msg: Box<RawValue>) -> Result<(), TrySubscriptionSendError> {
+		debug!(target: "narumi", capacity=self.inner.capacity(), "monitor");
 		match self.inner.try_send(msg) {
 			Ok(_) => Ok(()),
 			Err(TrySendError::Closed(_)) => Err(TrySubscriptionSendError::Closed),
@@ -651,17 +652,6 @@ fn subscription_channel(max_buf_size: usize) -> (SubscriptionSender, Subscriptio
 	let (tx, rx) = mpsc::channel(max_buf_size);
 	let lagged_tx = SubscriptionLagged::new();
 	let lagged_rx = lagged_tx.clone();
-
-	let tx_clone = tx.clone();
-	let max_cap = tx_clone.max_capacity();
-	std::thread::spawn(move || {
-		loop {
-			let remaining = tx_clone.capacity();
-			let used = max_cap - remaining;
-			debug!(target: "narumi", "[monitor] used: {used}, remaining: {remaining}");
-			std::thread::sleep(std::time::Duration::from_secs(1));
-		}
-	});
 
 	(SubscriptionSender { inner: tx, lagged: lagged_tx }, SubscriptionReceiver { inner: rx, lagged: lagged_rx })
 }
