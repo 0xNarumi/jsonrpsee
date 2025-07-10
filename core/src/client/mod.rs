@@ -622,7 +622,7 @@ pub(crate) struct SubscriptionSender {
 
 impl SubscriptionSender {
 	fn send(&self, msg: Box<RawValue>) -> Result<(), TrySubscriptionSendError> {
-		debug!(target: "narumi", capacity=self.inner.capacity(), "monitor");
+		debug!(target: "narumi", capacity=self.inner.capacity(), max_cap=self.inner.max_capacity(), "monitor");
 		match self.inner.try_send(msg) {
 			Ok(_) => Ok(()),
 			Err(TrySendError::Closed(_)) => Err(TrySubscriptionSendError::Closed),
